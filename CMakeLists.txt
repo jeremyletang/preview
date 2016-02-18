@@ -25,12 +25,77 @@ cmake_minimum_required (VERSION 2.8.1)
 
 project (preview)
 
+set (CIMG_CCFLAGS "-Dcimg_display=0 -Dcimg_verbosity=0")
+
+# Flags to enable native support for JPEG, TIFF, PNG
+set (CIMG_JPEG_CCFLAGS -Dcimg_use_jpeg)
+set (CIMG_TIFF_CCFLAGS -Dcimg_use_tiff)
+set (CIMG_PNG_CCFLAGS -Dcimg_use_png)
+set (CIMG_ZLIB_CCFLAGS -Dcimg_use_zlib)
+
+# try to find images formats supports
+find_package (PkgConfig)
+find_package (X11)
+find_package (Threads REQUIRED)
+find_package (PNG)
+find_package (ZLIB)
+find_package (JPEG)
+find_package (TIFF)
+
 set_property (GLOBAL PROPERTY USE_FOLDERS ON)
 set (CMAKE_INCLUDE_DIRECTORIES_PROJECT_BEFORE ON)
 set (CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 set_directory_properties(PROPERTIES CLEAN_NO_CUSTOM ON)
+set (THIRD_PARTY_DIR "${CMAKE_BINARY_DIR}/third_party")
 
+# download cimg
+include (cimg)
+include_directories (${CIMG_INCLUDE_DIR})
+
+# if tiff library found add it to the build
+if(TIFF_FOUND)
+  get_filename_component(TIFF_LIB_DIRS ${TIFF_LIBRARIES} PATH)
+  set (CIMG_CCFLAGS "${CIMG_CCFLAGS} ${CIMG_TIFF_CCFLAGS}")
+  link_directories(${TIFF_LIB_DIRS})
+  include_directories(${TIFF_INCLUDE_DIR})
+  set (CIMG_DEPENDENCIES ${CIMG_DEPENDENCIES} ${TIFF_LIBRARIES})
+endif()
+
+# if zlib+png library found add it to the build
+if (ZLIB_FOUND)
+    set (CIMG_CCFLAGS "${CIMG_CCFLAGS} ${CIMG_ZLIB_CCFLAGS}")
+    link_directories (${ZLIB_LIB_DIRS})
+    include_directories (${ZLIB_INCLUDE_DIR})
+    set (CIMG_DEPENDENCIES ${CIMG_DEPENDENCIES} ${ZLIB_LIBRARIES})
+
+    # PNG requires ZLIB
+    if(PNG_FOUND)
+        set (CIMG_CCFLAGS "${CIMG_CCFLAGS} ${CIMG_PNG_CCFLAGS}")
+        link_directories (${PNG_LIB_DIRS})
+        include_directories (${PNG_INCLUDE_DIR} )
+        set (CIMG_DEPENDENCIES ${CIMG_DEPENDENCIES} ${PNG_LIBRARIES} )
+    endif ()
+endif ()
+
+# if jpeg library found add it to the build
+if(JPEG_FOUND)
+  get_filename_component (JPEG_LIB_DIRS ${JPEG_LIBRARIES} PATH)
+  set (CIMG_CCFLAGS "${CIMG_CCFLAGS} ${CIMG_JPEG_CCFLAGS}")
+  link_directories (${JPEG_LIB_DIRS})
+  include_directories (${JPEG_INCLUDE_DIR})
+  set (CIMG_DEPENDENCIES ${CIMG_DEPENDENCIES} ${JPEG_LIBRARIES})
+endif()
+
+# basic flags
 set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -W -Wall -Wextra") #enable C++14
 set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g")
 
+# add cimg_ccflags
+set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CIMG_CCFLAGS}")
+
 add_executable (preview main.cpp)
+
+# linkg requireds libraries depending on the cimg_flags
+target_link_libraries (preview ${CIMG_DEPENDENCIES} pthread)
+# wait for cimg to be downloaded
+add_dependencies (preview cimg)

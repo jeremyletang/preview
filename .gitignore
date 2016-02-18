@@ -27,4 +27,9 @@
 *.out
 *.app
 
+# build folder
 build
+
+# docker stuff
+docker-compose.yml
+Dockerfile
