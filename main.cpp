@@ -22,9 +22,12 @@
 
 #include <iostream>
 #include <utility>
+#include <vector>
+#include <string>
 // c terminal utility
 #include <sys/ioctl.h>
 #include <stdio.h>
+#include <unistd.h>
 // CLimg library
 #include <CImg.h>
 
@@ -80,10 +83,64 @@ std::pair<bool, cimg_library::CImg<float>> load_img(const std::string& path) try
     return std::make_pair(false, cimg_library::CImg<float>());
 }
 
+struct arguments {
+    std::vector<std::string> filenames;
+    bool h;
+    arguments() = default;
+    arguments(std::vector<std::string> filenames, bool h = false)
+    : filenames(filenames), h(h) {}
+    ~arguments() = default;
+};
+
+std::pair<int, arguments> parse_cmdline(int ac, char* av[]) {
+    auto args = arguments{};
+    int index;
+    int c;
+    opterr = 0;
+
+    while ((c = getopt (ac, av, "h")) != -1) {
+        switch (c) {
+        case 'h': args.h = true; break;
+        case '?':
+            if (isprint(optopt)) {
+                std::cout << color{5, 0, 0, true} << "error" << clear << ": "
+                    << "unknown option -" << static_cast<char>(optopt) << std::endl;
+            }
+            return std::make_pair(1, args);
+        default: return std::make_pair(0, args);
+        }
+    }
+
+    for (index = optind; index < ac; index++) {
+        args.filenames.push_back(av[index]);
+    }
+
+    return std::make_pair(0, args);
+}
+
+void print_help(const std::string& program_name) {
+    std::cout << "usage: " << program_name << " [imgs ...] -h" << std::endl;
+}
+
 }}
 
-int main () {
-    auto img = preview::term::load_img("banana.jpg");
+int main (int ac, char* av[]) {
+    // get commandline arguments
+    auto args = preview::term::parse_cmdline(ac, av);
+    // an error occured, exit
+    if (args.first not_eq 0) { return EXIT_FAILURE; }
+    // if h == true display help
+    if (args.first == 0 and args.second.h == true) {
+        preview::term::print_help(av[0]);
+        return 0;
+    }
+    // if no files specified
+    if (args.second.filenames.empty()) {
+        std::cout << preview::term::color{5, 0, 0, true} << "error" << preview::term::clear << ": "
+            << "preview needs at least one input file" << std::endl;
+        return EXIT_FAILURE;
+    }
+    auto img = preview::term::load_img(args.second.filenames[0]);
     if (not img.first) { return EXIT_FAILURE; }
     std::cout << preview::term::color{0,0,5} << "    " << preview::term::clear << std::endl;
 }

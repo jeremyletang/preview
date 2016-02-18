@@ -1,2 +1,2 @@
 # preview
-image preview in terminal
+image preview in your terminal
