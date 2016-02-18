@@ -48,11 +48,22 @@ size dimension() {
 }
 
 struct color {
-    int r,g,b;
+    float r,g,b;
     bool fg;
     color() = delete;
-    color(float r, float g, float b, bool fg = false)
-    : r(r), g(g), b(b), fg(fg) {}
+    color(uint8_t r, uint8_t g, uint8_t b, bool fg = false)
+    : r(static_cast<float>(r) / 255. * 5.) 
+    , g(static_cast<float>(g) / 255. * 5.) 
+    , b(static_cast<float>(b) / 255. * 5.) 
+    , fg(fg) {}
+    static color from_float(float r_, float g_, float b_, bool fg_ = false) {
+        auto this_ = color{0, 0, 0};
+        this_.r = r_;
+        this_.g = g_;
+        this_.b = b_;
+        this_.fg = fg_;
+        return this_;
+    }
 };
 
 struct clear_t {};
@@ -61,7 +72,7 @@ static clear_t clear;
 template <typename CharT, typename Traits>
 std::basic_ostream<CharT, Traits>&
 operator<<(std::basic_ostream<CharT, Traits>& os, const color& c) {
-    float _c = 16 + 36 * c.r + 6. * c.g + c.b;
+    unsigned int _c = 16. + 36. * c.r + 6. * c.g + c.b;
     if (not c.fg) {os << "\x1b[48;5;" << _c << "m";}
     else {os << "\x1b[38;5;" << _c << "m";}
     return os;
@@ -78,7 +89,7 @@ std::pair<bool, cimg_library::CImg<float>> load_img(const std::string& path) try
     auto i = cimg_library::CImg<float>(path.c_str());
     return std::make_pair(true, i);
 } catch (...) {
-    std::cout << color{5, 0, 0, true} << "error" << clear << ": "
+    std::cout << color{255, 0, 0, true} << "error" << clear << ": "
         << "no such file " << path << ", or unsupported image file format." << std::endl;
     return std::make_pair(false, cimg_library::CImg<float>());
 }
@@ -103,7 +114,7 @@ std::pair<int, arguments> parse_cmdline(int ac, char* av[]) {
         case 'h': args.h = true; break;
         case '?':
             if (isprint(optopt)) {
-                std::cout << color{5, 0, 0, true} << "error" << clear << ": "
+                std::cout << color{255, 0, 0, true} << "error" << clear << ": "
                     << "unknown option -" << static_cast<char>(optopt) << std::endl;
             }
             return std::make_pair(1, args);
@@ -136,11 +147,11 @@ int main (int ac, char* av[]) {
     }
     // if no files specified
     if (args.second.filenames.empty()) {
-        std::cout << preview::term::color{5, 0, 0, true} << "error" << preview::term::clear << ": "
+        std::cout << preview::term::color{255, 0, 0, true} << "error" << preview::term::clear << ": "
             << "preview needs at least one input file" << std::endl;
         return EXIT_FAILURE;
     }
     auto img = preview::term::load_img(args.second.filenames[0]);
     if (not img.first) { return EXIT_FAILURE; }
-    std::cout << preview::term::color{0,0,5} << "    " << preview::term::clear << std::endl;
+    std::cout << preview::term::color{0, 0, 255} << "  " << preview::term::clear << std::endl;
 }
