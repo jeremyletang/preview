@@ -24,6 +24,7 @@
 #include <utility>
 #include <vector>
 #include <string>
+#include <sstream>
 // c terminal utility
 #include <sys/ioctl.h>
 #include <stdio.h>
@@ -36,15 +37,15 @@ namespace term {
 
 struct size {
     unsigned int column;
-    unsigned int raw;
-    size(unsigned int column, unsigned int raw)
-    : column(column), raw(raw) {}
+    unsigned int row;
+    size(unsigned int column, unsigned int row)
+    : column(column), row(row) {}
 };
 
-size dimension() {
+size get_term_size() {
     struct winsize w;
     ioctl(0, TIOCGWINSZ, &w);
-    return {w.ws_row, w.ws_col};
+    return {w.ws_col, w.ws_row};
 }
 
 struct color {
@@ -133,6 +134,72 @@ void print_help(const std::string& program_name) {
     std::cout << "usage: " << program_name << " [imgs ...] -h" << std::endl;
 }
 
+const auto red_value = 0;
+const auto green_value = 1;
+const auto blue_value = 2;
+
+void print_one(unsigned int x,
+               unsigned int y,
+               unsigned int x_lag,
+               unsigned int y_lag,
+               const cimg_library::CImg<float>& img,
+               std::stringstream& ss) {
+    auto x_end = x+x_lag;
+    auto y_end = y+y_lag;
+    auto acc_red = 0;
+    auto acc_green = 0;
+    auto acc_blue = 0;
+    auto x_iter = x;
+    auto y_iter = y;
+    int i = 0;
+
+    while ((x_iter < x_end)) {
+        y_iter = y;
+        while (y_iter < y_end) {
+            i+=1;
+            acc_red += img(x_iter, y_iter, 0, red_value);
+            acc_green += img(x_iter, y_iter, 0, green_value);
+            acc_blue += img(x_iter, y_iter, blue_value);
+            y_iter += 1;
+        }
+        x_iter += 1;
+    }
+
+    acc_red = acc_red / (x_lag*y_lag);
+    acc_green = acc_green / (x_lag*y_lag);
+    acc_blue = acc_blue / (x_lag*y_lag);
+    auto c = color{
+        static_cast<uint8_t>(acc_red),
+        static_cast<uint8_t>(acc_green),
+        static_cast<uint8_t>(acc_blue)
+    };
+
+    ss << c << " " << clear;
+}
+
+void print_image(cimg_library::CImg<float>& img) {
+    auto ss = std::stringstream{};
+    auto img_width = img.width();
+    auto img_height = img.height();
+    auto term_size = get_term_size();
+    auto x_lag = (img_width / term_size.column) + 1; 
+    auto y_lag = (img_height / term_size.row) + 1; 
+    auto x = 0;
+    auto y = 0;
+
+    while (y < img_height) {
+        x = 0;
+        while (x < img_width) {
+            print_one(x, y, x_lag, y_lag, img, ss);
+            x+=x_lag;
+        }
+        ss << std::endl;
+        y+=y_lag;
+    }
+
+    std::cout << ss.str() << std::endl;
+}
+
 }}
 
 int main (int ac, char* av[]) {
@@ -152,6 +219,6 @@ int main (int ac, char* av[]) {
         return EXIT_FAILURE;
     }
     auto img = preview::term::load_img(args.second.filenames[0]);
+    preview::term::print_image(img.second);
     if (not img.first) { return EXIT_FAILURE; }
-    std::cout << preview::term::color{0, 0, 255} << "  " << preview::term::clear << std::endl;
 }
