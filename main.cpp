@@ -138,9 +138,12 @@ void print_image(cimg_library::CImg<float>& img) {
     img.resize(term_size.column/2, -((term_size.column/2.)/img.width()*100));
     auto x = 0;
     auto y = 0;
+    auto buffer = std::string(((term_size.column - img.width()) / 2), ' ');
 
     while (y < img.height()) {
         x = 0;
+        // add the buffer to center the image
+        ss << buffer;
         while (x < img.width()) {
             auto red_fg = static_cast<uint8_t>(img(x, y, 0, red_value));
             auto green_fg = static_cast<uint8_t>(img(x, y, 0, green_value));
