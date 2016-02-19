@@ -127,7 +127,11 @@ std::pair<int, arguments> parse_cmdline(int ac, char* av[]) {
 }
 
 void print_help(const std::string& program_name) {
-    std::cout << "usage: " << program_name << " [imgs ...] -h" << std::endl;
+    std::cout << "usage: " << program_name << " [imgs ...] -hvs" << std::endl;
+    std::cout << " -h           display this help" << std::endl;
+    std::cout << " -v           show preview version" << std::endl;
+    std::cout << " -s [0..100]  width of the image as a percentage of the term width," << std::endl;
+    std::cout << "              default to 50." << std::endl;
 }
 
 void print_version() {
