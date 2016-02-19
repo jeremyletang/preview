@@ -89,65 +89,8 @@ std::pair<bool, cimg_library::CImg<float>> load_img(const std::string& path) try
     return std::make_pair(false, cimg_library::CImg<float>());
 }
 
-struct arguments {
-    std::vector<std::string> filenames;
-    bool h;
-    bool v;
-    bool s;
-    std::string s_value;
-    arguments() = default;
-    arguments(std::vector<std::string> filenames, bool h = false, bool v = false)
-    : filenames(filenames), h(h), v(v) {}
-    ~arguments() = default;
-};
-
-std::pair<int, arguments> parse_cmdline(int ac, char* av[]) {
-    auto args = arguments{};
-    int index;
-    int c;
-    opterr = 0;
-
-    while ((c = getopt (ac, av, "hvs:")) != -1) {
-        switch (c) {
-        case 'h': args.h = true; break;
-        case 'v': args.v = true; break;
-        case 's':
-            args.s = true;
-            args.s_value = optarg;
-            break;
-        case '?':
-            if (optopt == 's') {
-                std::cout << color{255, 0, 0, true} << "error" << clear << ": "
-                    << "option -s require a value" << std::endl;
-            } else if (isprint(optopt)) {
-                std::cout << color{255, 0, 0, true} << "error" << clear << ": "
-                    << "unknown option -" << static_cast<char>(optopt) << std::endl;
-            }
-            return std::make_pair(1, args);
-        default: return std::make_pair(0, args);
-        }
-    }
-
-    for (index = optind; index < ac; index++) {
-        args.filenames.push_back(av[index]);
-    }
-
-    return std::make_pair(0, args);
-}
-
-void print_help(const std::string& program_name) {
-    std::cout << "usage: " << program_name << " [imgs ...] -hvs" << std::endl;
-    std::cout << " -h           display this help" << std::endl;
-    std::cout << " -v           show preview version" << std::endl;
-    std::cout << " -s [0..100]  width of the image as a percentage of the term width," << std::endl;
-    std::cout << "              default to 50." << std::endl;
-}
-
-void print_version() {
-    std::cout << "preview version " << PREVIEW_VERSION << std::endl;
-}
-
-void print_image(cimg_library::CImg<float>& img, unsigned int scale = 50) {
+void print_image(cimg_library::CImg<float>& img,
+                 unsigned int scale = 50) {
     // get rgb inside a pixel
     const auto red_value = 0;
     const auto green_value = 1;
@@ -190,22 +133,88 @@ void print_image(cimg_library::CImg<float>& img, unsigned int scale = 50) {
     std::cout << ss.str() << std::endl;
 }
 
-}}
+} // term
+
+namespace cmdline {
+
+struct arguments {
+    std::vector<std::string> filenames;
+    bool h;
+    bool v;
+    bool s;
+    std::string s_value;
+    arguments() = default;
+    arguments(std::vector<std::string> filenames, bool h = false, bool v = false)
+    : filenames(filenames), h(h), v(v) {}
+    ~arguments() = default;
+};
+
+std::pair<int, arguments> parse(int ac, char* av[]) {
+    auto args = arguments{};
+    int index;
+    int c;
+    opterr = 0;
+
+    while ((c = getopt (ac, av, "hvs:")) != -1) {
+        switch (c) {
+        case 'h': args.h = true; break;
+        case 'v': args.v = true; break;
+        case 's':
+            args.s = true;
+            args.s_value = optarg;
+            break;
+        case '?':
+            if (optopt == 's') {
+                std::cout << term::color{255, 0, 0, true} << "error" << term::clear << ": "
+                    << "option -s require a value" << std::endl;
+            } else if (isprint(optopt)) {
+                std::cout << term::color{255, 0, 0, true} << "error" << term::clear << ": "
+                    << "unknown option -" << static_cast<char>(optopt) << std::endl;
+            }
+            return std::make_pair(1, args);
+        default: return std::make_pair(0, args);
+        }
+    }
+
+    for (index = optind; index < ac; index++) {
+        args.filenames.push_back(av[index]);
+    }
+
+    return std::make_pair(0, args);
+}
+
+void print_help(const std::string& program_name) {
+    std::cout << "usage: " << program_name << " [imgs ...] -hvs" << std::endl;
+    std::cout << " -h           display this help" << std::endl;
+    std::cout << " -v           show preview version" << std::endl;
+    std::cout << " -s [0..100]  width of the image as a percentage of the term width," << std::endl;
+    std::cout << "              default to 50." << std::endl;
+}
+
+void print_version() {
+    std::cout << "preview version " << PREVIEW_VERSION << std::endl;
+}
+
+} // cmdline
+} // preview
 
 int main (int ac, char* av[]) {
     // get commandline arguments
-    auto args = preview::term::parse_cmdline(ac, av);
+    auto args = preview::cmdline::parse(ac, av);
     auto scale = 50;
+
+    // validate arguments from commandline
+
     // an error occured, exit
     if (args.first not_eq 0) { return EXIT_FAILURE; }
     // if h == true display help
     if (args.first == 0 and args.second.h == true) {
-        preview::term::print_help(av[0]);
+        preview::cmdline::print_help(av[0]);
         return 0;
     }
     // if v == true display version
     if (args.first == 0 and args.second.v == true) {
-        preview::term::print_version();
+        preview::cmdline::print_version();
         return 0;
     }
     // if s == true use custom scale
@@ -229,14 +238,21 @@ int main (int ac, char* av[]) {
             << "preview needs at least one input file" << std::endl;
         return EXIT_FAILURE;
     }
+
+    // load images
+
     auto imgs = std::vector<cimg_library::CImg<float>>{};
     // images
     for (const auto& file: args.second.filenames) {
         auto img = preview::term::load_img(file);
         if (img.first) {imgs.push_back(img.second);}
     }
-    // print all images
+
+
+    // print images
     for (auto& i : imgs) {
         preview::term::print_image(i, scale);
     }
+
+    return 0;
 }
