@@ -89,8 +89,21 @@ std::pair<bool, cimg_library::CImg<float>> load_img(const std::string& path) try
     return std::make_pair(false, cimg_library::CImg<float>());
 }
 
+std::string make_buffer(const term::size& s,
+                        unsigned int img_width,
+                        const std::string& position) {
+    if (position == "left") {
+        return std::string{""};
+    } else if (position == "center") {
+        return std::string(((s.column - img_width) / 2), ' ');
+    }
+    // last possible case is right
+    return std::string((s.column - img_width), ' ');
+}
+
 void print_image(cimg_library::CImg<float>& img,
-                 unsigned int scale = 50) {
+                 unsigned int scale = 50,
+                 const std::string& position = "left") {
     // get rgb inside a pixel
     const auto red_value = 0;
     const auto green_value = 1;
@@ -103,7 +116,7 @@ void print_image(cimg_library::CImg<float>& img,
     img.resize(term_size.column*fscale, -((term_size.column*fscale)/img.width()*100));
     auto x = 0;
     auto y = 0;
-    auto buffer = std::string(((term_size.column - img.width()) / 2), ' ');
+    auto buffer = make_buffer(term_size, img.width(), position);
 
     while (y < img.height()) {
         x = 0;
@@ -142,10 +155,12 @@ struct arguments {
     bool h;
     bool v;
     bool s;
+    bool p;
     std::string s_value;
-    arguments() = default;
-    arguments(std::vector<std::string> filenames, bool h = false, bool v = false)
-    : filenames(filenames), h(h), v(v) {}
+    std::string p_value;
+    arguments()
+    : filenames({}), h(false), v(false), s(false)
+    , p(false), s_value("50"), p_value("left") {}
     ~arguments() = default;
 };
 
@@ -155,7 +170,7 @@ std::pair<int, arguments> parse(int ac, char* av[]) {
     int c;
     opterr = 0;
 
-    while ((c = getopt (ac, av, "hvs:")) != -1) {
+    while ((c = getopt (ac, av, "hvs:p:")) != -1) {
         switch (c) {
         case 'h': args.h = true; break;
         case 'v': args.v = true; break;
@@ -163,8 +178,12 @@ std::pair<int, arguments> parse(int ac, char* av[]) {
             args.s = true;
             args.s_value = optarg;
             break;
+        case 'p':
+            args.p = true;
+            args.p_value = optarg;
+            break;
         case '?':
-            if (optopt == 's') {
+            if (optopt == 's' or optopt == 'p') {
                 std::cout << term::color{255, 0, 0, true} << "error" << term::clear << ": "
                     << "option -s require a value" << std::endl;
             } else if (isprint(optopt)) {
@@ -189,6 +208,7 @@ void print_help(const std::string& program_name) {
     std::cout << " -v           show preview version" << std::endl;
     std::cout << " -s [0..100]  width of the image as a percentage of the term width," << std::endl;
     std::cout << "              default to 50." << std::endl;
+    std::cout << " -p pos       image position (left|center|right)" << std::endl;
 }
 
 void print_version() {
@@ -228,10 +248,20 @@ int main (int ac, char* av[]) {
         }
     } catch (...) {
         std::cout << preview::term::color{255, 0, 0, true}
-                << "error" << preview::term::clear <<
-                ": scale should be between 0..100." << "" << std::endl;
+            << "error" << preview::term::clear
+            << ": scale should be between 0..100." << "" << std::endl;
             return EXIT_FAILURE;
     }
+    // if p == true custom position
+    if (args.first == 0 and args.second.p == true) {
+        if (args.second.p_value not_eq "left" and args.second.p_value not_eq "center" and
+            args.second.p_value not_eq "right") {
+            std::cout << "error" << preview::term::clear
+                << ": position should be left|center|right" << "" << std::endl;
+            return EXIT_FAILURE;
+        }
+    }
+
     // if no files specified
     if (args.second.filenames.empty()) {
         std::cout << preview::term::color{255, 0, 0, true} << "error" << preview::term::clear << ": "
@@ -248,10 +278,9 @@ int main (int ac, char* av[]) {
         if (img.first) {imgs.push_back(img.second);}
     }
 
-
     // print images
     for (auto& i : imgs) {
-        preview::term::print_image(i, scale);
+        preview::term::print_image(i, scale, args.second.p_value);
     }
 
     return 0;
