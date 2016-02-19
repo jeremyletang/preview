@@ -6,7 +6,7 @@ It is build using C++14 and use internally the awesome library [CImg](https://gi
 to read images, iterates overs pixels.
 
 ## Screenshot
-Look's what a banana look like with *preview*
+Look what a banana looks like with *preview*
 ![Screenshot](/img/screenshot.png "Banana")
 
 ## Installation
