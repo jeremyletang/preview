@@ -17,6 +17,8 @@ need to type from the root repository:
 > cmake ..
 > make
 ```
+Depending of the libraries installed on you computer, *preview* will be able to support different 
+file format
 
 ## Examples
 Some example images are available inside the repository, we can use them this way (assuming you're 
