@@ -25,6 +25,10 @@ cmake_minimum_required (VERSION 2.8.1)
 
 project (preview)
 
+set (PREVIEW_VERSION_MAJOR 0)
+set (PREVIEW_VERSION_MINOR 1)
+set (PREVIEW_VERSION_PATCH 0)
+
 set (CIMG_CCFLAGS "-Dcimg_display=0 -Dcimg_verbosity=0")
 
 # Flags to enable native support for JPEG, TIFF, PNG
@@ -87,11 +91,18 @@ if(JPEG_FOUND)
 endif()
 
 # basic flags
-set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -W -Wall -Wextra") #enable C++14
+set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -W -Wall -Wextra -O3") #enable C++14
 set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g")
 
 # add cimg_ccflags
 set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CIMG_CCFLAGS}")
+
+configure_file (
+    "${PROJECT_SOURCE_DIR}/version.h.in"
+    "${PROJECT_BINARY_DIR}/version.h"
+)
+
+include_directories(${PROJECT_BINARY_DIR})
 
 add_executable (preview main.cpp)
 

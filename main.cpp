@@ -31,6 +31,8 @@
 #include <unistd.h>
 // CLimg library
 #include <CImg.h>
+// cmake generated version
+#include <version.h>
 
 namespace preview {
 namespace term {
@@ -90,9 +92,10 @@ std::pair<bool, cimg_library::CImg<float>> load_img(const std::string& path) try
 struct arguments {
     std::vector<std::string> filenames;
     bool h;
+    bool v;
     arguments() = default;
-    arguments(std::vector<std::string> filenames, bool h = false)
-    : filenames(filenames), h(h) {}
+    arguments(std::vector<std::string> filenames, bool h = false, bool v = false)
+    : filenames(filenames), h(h), v(v) {}
     ~arguments() = default;
 };
 
@@ -102,9 +105,10 @@ std::pair<int, arguments> parse_cmdline(int ac, char* av[]) {
     int c;
     opterr = 0;
 
-    while ((c = getopt (ac, av, "h")) != -1) {
+    while ((c = getopt (ac, av, "hv")) != -1) {
         switch (c) {
         case 'h': args.h = true; break;
+        case 'v': args.v = true; break;
         case '?':
             if (isprint(optopt)) {
                 std::cout << color{255, 0, 0, true} << "error" << clear << ": "
@@ -124,6 +128,10 @@ std::pair<int, arguments> parse_cmdline(int ac, char* av[]) {
 
 void print_help(const std::string& program_name) {
     std::cout << "usage: " << program_name << " [imgs ...] -h" << std::endl;
+}
+
+void print_version() {
+    std::cout << "preview version " << PREVIEW_VERSION << std::endl;
 }
 
 void print_image(cimg_library::CImg<float>& img) {
@@ -178,6 +186,10 @@ int main (int ac, char* av[]) {
     // if h == true display help
     if (args.first == 0 and args.second.h == true) {
         preview::term::print_help(av[0]);
+        return 0;
+    }
+    if (args.first == 0 and args.second.v == true) {
+        preview::term::print_version();
         return 0;
     }
     // if no files specified
