@@ -93,6 +93,8 @@ struct arguments {
     std::vector<std::string> filenames;
     bool h;
     bool v;
+    bool s;
+    std::string s_value;
     arguments() = default;
     arguments(std::vector<std::string> filenames, bool h = false, bool v = false)
     : filenames(filenames), h(h), v(v) {}
@@ -105,12 +107,19 @@ std::pair<int, arguments> parse_cmdline(int ac, char* av[]) {
     int c;
     opterr = 0;
 
-    while ((c = getopt (ac, av, "hv")) != -1) {
+    while ((c = getopt (ac, av, "hvs:")) != -1) {
         switch (c) {
         case 'h': args.h = true; break;
         case 'v': args.v = true; break;
+        case 's':
+            args.s = true;
+            args.s_value = optarg;
+            break;
         case '?':
-            if (isprint(optopt)) {
+            if (optopt == 's') {
+                std::cout << color{255, 0, 0, true} << "error" << clear << ": "
+                    << "option -s require a value" << std::endl;
+            } else if (isprint(optopt)) {
                 std::cout << color{255, 0, 0, true} << "error" << clear << ": "
                     << "unknown option -" << static_cast<char>(optopt) << std::endl;
             }
@@ -138,16 +147,17 @@ void print_version() {
     std::cout << "preview version " << PREVIEW_VERSION << std::endl;
 }
 
-void print_image(cimg_library::CImg<float>& img) {
+void print_image(cimg_library::CImg<float>& img, unsigned int scale = 50) {
     // get rgb inside a pixel
     const auto red_value = 0;
     const auto green_value = 1;
     const auto blue_value = 2;
     // output
+    float fscale = scale/100.;
     auto ss = std::stringstream{};
     auto term_size = get_term_size();
     // resize the image
-    img.resize(term_size.column/2, -((term_size.column/2.)/img.width()*100));
+    img.resize(term_size.column*fscale, -((term_size.column*fscale)/img.width()*100));
     auto x = 0;
     auto y = 0;
     auto buffer = std::string(((term_size.column - img.width()) / 2), ' ');
@@ -185,6 +195,7 @@ void print_image(cimg_library::CImg<float>& img) {
 int main (int ac, char* av[]) {
     // get commandline arguments
     auto args = preview::term::parse_cmdline(ac, av);
+    auto scale = 50;
     // an error occured, exit
     if (args.first not_eq 0) { return EXIT_FAILURE; }
     // if h == true display help
@@ -192,9 +203,25 @@ int main (int ac, char* av[]) {
         preview::term::print_help(av[0]);
         return 0;
     }
+    // if v == true display version
     if (args.first == 0 and args.second.v == true) {
         preview::term::print_version();
         return 0;
+    }
+    // if s == true use custom scale
+    if (args.first == 0 and args.second.s == true) try {
+        scale = std::stoi(args.second.s_value);
+        if (scale <= 0 or scale > 100) {
+            std::cout << preview::term::color{255, 0, 0, true}
+                << "error" << preview::term::clear <<
+                ": scale should be between 0..100." << "" << std::endl;
+            return EXIT_FAILURE;
+        }
+    } catch (...) {
+        std::cout << preview::term::color{255, 0, 0, true}
+                << "error" << preview::term::clear <<
+                ": scale should be between 0..100." << "" << std::endl;
+            return EXIT_FAILURE;
     }
     // if no files specified
     if (args.second.filenames.empty()) {
@@ -210,6 +237,6 @@ int main (int ac, char* av[]) {
     }
     // print all images
     for (auto& i : imgs) {
-        preview::term::print_image(i);
+        preview::term::print_image(i, scale);
     }
 }
