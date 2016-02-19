@@ -179,24 +179,29 @@ void print_one(unsigned int x,
 
 void print_image(cimg_library::CImg<float>& img) {
     auto ss = std::stringstream{};
+    auto term_size = get_term_size();
+    img.resize(term_size.column/2, -((term_size.column/2.)/img.width()*100));
     auto img_width = img.width();
     auto img_height = img.height();
-    auto term_size = get_term_size();
-    auto x_lag = (img_width / term_size.column) + 1; 
-    auto y_lag = (img_height / term_size.row) + 1; 
     auto x = 0;
     auto y = 0;
 
     while (y < img_height) {
         x = 0;
         while (x < img_width) {
-            print_one(x, y, x_lag, y_lag, img, ss);
-            x+=x_lag;
+            auto red_bg = static_cast<uint8_t>(img(x, y, 0, red_value));
+            auto green_bg = static_cast<uint8_t>(img(x, y, 0, green_value));
+            auto blue_bg = static_cast<uint8_t>(img(x, y, blue_value));
+            auto red_fg = static_cast<uint8_t>(img(x, y+1, 0, red_value));
+            auto green_fg = static_cast<uint8_t>(img(x, y+1, 0, green_value));
+            auto blue_fg = static_cast<uint8_t>(img(x, y+1, blue_value));
+            ss << color{red_bg, green_bg, blue_bg} << color{red_fg, green_fg, blue_fg, true}
+                << "\u2584" << clear;
+            x+=1;
         }
         ss << std::endl;
-        y+=y_lag;
+        y+=2;
     }
-
     std::cout << ss.str() << std::endl;
 }
 
