@@ -158,7 +158,8 @@ void print_image(cimg_library::CImg<float>& img) {
             ss << clear;
             x+=1;
         }
-        ss << "\n";
+        // if there is more row to print, add \n
+        if (y+2 < img.height()) {ss << "\n";}
         y+=2;
     }
     std::cout << ss.str() << std::endl;
@@ -182,7 +183,14 @@ int main (int ac, char* av[]) {
             << "preview needs at least one input file" << std::endl;
         return EXIT_FAILURE;
     }
-    auto img = preview::term::load_img(args.second.filenames[0]);
-    if (not img.first) { return EXIT_FAILURE; }
-    preview::term::print_image(img.second);
+    auto imgs = std::vector<cimg_library::CImg<float>>{};
+    // images
+    for (const auto& file: args.second.filenames) {
+        auto img = preview::term::load_img(file);
+        if (img.first) {imgs.push_back(img.second);}
+    }
+    // print all images
+    for (auto& i : imgs) {
+        preview::term::print_image(i);
+    }
 }
