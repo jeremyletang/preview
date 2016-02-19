@@ -101,39 +101,48 @@ std::string make_buffer(const term::size& s,
     return std::string((s.column - img_width), ' ');
 }
 
-void print_image(cimg_library::CImg<float>& img,
-                 unsigned int scale = 50,
-                 const std::string& position = "left") {
+color make_color_from_pixel(const cimg_library::CImg<float>& img,
+                            unsigned int x,
+                            unsigned int y,
+                            bool foreground = false) {
     // get rgb inside a pixel
     const auto red_value = 0;
     const auto green_value = 1;
     const auto blue_value = 2;
+
+    // get pixel colors
+    auto red = static_cast<uint8_t>(img(x, y, 0, red_value));
+    auto green = static_cast<uint8_t>(img(x, y, 0, green_value));
+    auto blue = static_cast<uint8_t>(img(x, y, blue_value));
+
+    // make a new color
+    return color{red, green, blue, foreground};
+}
+
+void print_image(cimg_library::CImg<float>& img,
+                 unsigned int scale = 50,
+                 const std::string& position = "left") {
     // output
     float fscale = scale/100.;
     auto ss = std::stringstream{};
     auto term_size = get_term_size();
     // resize the image
     img.resize(term_size.column*fscale, -((term_size.column*fscale)/img.width()*100));
+    // buffef left|center|right
+    auto buffer = make_buffer(term_size, img.width(), position);
     auto x = 0;
     auto y = 0;
-    auto buffer = make_buffer(term_size, img.width(), position);
 
     while (y < img.height()) {
         x = 0;
         // add the buffer to center the image
         ss << buffer;
         while (x < img.width()) {
-            auto red_fg = static_cast<uint8_t>(img(x, y, 0, red_value));
-            auto green_fg = static_cast<uint8_t>(img(x, y, 0, green_value));
-            auto blue_fg = static_cast<uint8_t>(img(x, y, blue_value));
-            ss << color{red_fg, green_fg, blue_fg, true};
+            ss << make_color_from_pixel(img, x, y, true);
             // if we always are on the image
             if (y+1 < img.height()) {
-                auto red_bg = static_cast<uint8_t>(img(x, y+1, 0, red_value));
-                auto green_bg = static_cast<uint8_t>(img(x, y+1, 0, green_value));
-                auto blue_bg = static_cast<uint8_t>(img(x, y+1, blue_value));
-                ss << color{red_bg, green_bg, blue_bg} << "\u2580";
-            } else { // use the same color thant y for y+1
+                ss << make_color_from_pixel(img, x, y+1, false) << "\u2580";
+            } else { // use the same color than y for y+1
                 ss << " ";
             }
             ss << clear;
