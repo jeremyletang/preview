@@ -49,22 +49,14 @@ size get_term_size() {
 }
 
 struct color {
-    float r,g,b;
+    uint8_t r,g,b;
     bool fg;
     color() = delete;
     color(uint8_t r, uint8_t g, uint8_t b, bool fg = false)
-    : r(static_cast<float>(r) / 255. * 5.) 
-    , g(static_cast<float>(g) / 255. * 5.) 
-    , b(static_cast<float>(b) / 255. * 5.) 
+    : r(static_cast<uint8_t>(r) / 255. * 5.) 
+    , g(static_cast<uint8_t>(g) / 255. * 5.) 
+    , b(static_cast<uint8_t>(b) / 255. * 5.) 
     , fg(fg) {}
-    static color from_float(float r_, float g_, float b_, bool fg_ = false) {
-        auto this_ = color{0, 0, 0};
-        this_.r = r_;
-        this_.g = g_;
-        this_.b = b_;
-        this_.fg = fg_;
-        return this_;
-    }
 };
 
 struct clear_t {};
@@ -73,7 +65,7 @@ static clear_t clear;
 template <typename CharT, typename Traits>
 std::basic_ostream<CharT, Traits>&
 operator<<(std::basic_ostream<CharT, Traits>& os, const color& c) {
-    unsigned int _c = 16. + 36. * c.r + 6. * c.g + c.b;
+    unsigned int _c = 16 + 36 * c.r + 6 * c.g + c.b;
     if (not c.fg) {os << "\x1b[48;5;" << _c << "m";}
     else {os << "\x1b[38;5;" << _c << "m";}
     return os;
@@ -134,72 +126,39 @@ void print_help(const std::string& program_name) {
     std::cout << "usage: " << program_name << " [imgs ...] -h" << std::endl;
 }
 
-const auto red_value = 0;
-const auto green_value = 1;
-const auto blue_value = 2;
-
-void print_one(unsigned int x,
-               unsigned int y,
-               unsigned int x_lag,
-               unsigned int y_lag,
-               const cimg_library::CImg<float>& img,
-               std::stringstream& ss) {
-    auto x_end = x+x_lag;
-    auto y_end = y+y_lag;
-    auto acc_red = 0;
-    auto acc_green = 0;
-    auto acc_blue = 0;
-    auto x_iter = x;
-    auto y_iter = y;
-    int i = 0;
-
-    while ((x_iter < x_end)) {
-        y_iter = y;
-        while (y_iter < y_end) {
-            i+=1;
-            acc_red += img(x_iter, y_iter, 0, red_value);
-            acc_green += img(x_iter, y_iter, 0, green_value);
-            acc_blue += img(x_iter, y_iter, blue_value);
-            y_iter += 1;
-        }
-        x_iter += 1;
-    }
-
-    acc_red = acc_red / (x_lag*y_lag);
-    acc_green = acc_green / (x_lag*y_lag);
-    acc_blue = acc_blue / (x_lag*y_lag);
-    auto c = color{
-        static_cast<uint8_t>(acc_red),
-        static_cast<uint8_t>(acc_green),
-        static_cast<uint8_t>(acc_blue)
-    };
-
-    ss << c << " " << clear;
-}
-
 void print_image(cimg_library::CImg<float>& img) {
+    // get rgb inside a pixel
+    const auto red_value = 0;
+    const auto green_value = 1;
+    const auto blue_value = 2;
+    // output
     auto ss = std::stringstream{};
     auto term_size = get_term_size();
+    // resize the image
     img.resize(term_size.column/2, -((term_size.column/2.)/img.width()*100));
-    auto img_width = img.width();
-    auto img_height = img.height();
     auto x = 0;
     auto y = 0;
 
-    while (y < img_height) {
+    while (y < img.height()) {
         x = 0;
-        while (x < img_width) {
-            auto red_bg = static_cast<uint8_t>(img(x, y, 0, red_value));
-            auto green_bg = static_cast<uint8_t>(img(x, y, 0, green_value));
-            auto blue_bg = static_cast<uint8_t>(img(x, y, blue_value));
-            auto red_fg = static_cast<uint8_t>(img(x, y+1, 0, red_value));
-            auto green_fg = static_cast<uint8_t>(img(x, y+1, 0, green_value));
-            auto blue_fg = static_cast<uint8_t>(img(x, y+1, blue_value));
-            ss << color{red_bg, green_bg, blue_bg} << color{red_fg, green_fg, blue_fg, true}
-                << "\u2584" << clear;
+        while (x < img.width()) {
+            auto red_fg = static_cast<uint8_t>(img(x, y, 0, red_value));
+            auto green_fg = static_cast<uint8_t>(img(x, y, 0, green_value));
+            auto blue_fg = static_cast<uint8_t>(img(x, y, blue_value));
+            ss << color{red_fg, green_fg, blue_fg, true};
+            // if we always are on the image
+            if (y+1 < img.height()) {
+                auto red_bg = static_cast<uint8_t>(img(x, y+1, 0, red_value));
+                auto green_bg = static_cast<uint8_t>(img(x, y+1, 0, green_value));
+                auto blue_bg = static_cast<uint8_t>(img(x, y+1, blue_value));
+                ss << color{red_bg, green_bg, blue_bg} << "\u2580";
+            } else { // use the same color thant y for y+1
+                ss << " ";
+            }
+            ss << clear;
             x+=1;
         }
-        ss << std::endl;
+        ss << "\n";
         y+=2;
     }
     std::cout << ss.str() << std::endl;
@@ -224,6 +183,6 @@ int main (int ac, char* av[]) {
         return EXIT_FAILURE;
     }
     auto img = preview::term::load_img(args.second.filenames[0]);
-    preview::term::print_image(img.second);
     if (not img.first) { return EXIT_FAILURE; }
+    preview::term::print_image(img.second);
 }
