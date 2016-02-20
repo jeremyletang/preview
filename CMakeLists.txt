@@ -26,7 +26,7 @@ cmake_minimum_required (VERSION 2.8.1)
 project (preview)
 
 set (PREVIEW_VERSION_MAJOR 0)
-set (PREVIEW_VERSION_MINOR 1)
+set (PREVIEW_VERSION_MINOR 2)
 set (PREVIEW_VERSION_PATCH 0)
 
 set (CIMG_CCFLAGS "-Dcimg_display=0 -Dcimg_verbosity=0")

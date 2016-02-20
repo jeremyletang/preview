@@ -194,7 +194,7 @@ std::pair<int, arguments> parse(int ac, char* av[]) {
         case '?':
             if (optopt == 's' or optopt == 'p') {
                 std::cout << term::color{255, 0, 0, true} << "error" << term::clear << ": "
-                    << "option -s require a value" << std::endl;
+                    << "option -" << static_cast<char>(optopt) << " require a value" << std::endl;
             } else if (isprint(optopt)) {
                 std::cout << term::color{255, 0, 0, true} << "error" << term::clear << ": "
                     << "unknown option -" << static_cast<char>(optopt) << std::endl;
